@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ad Performance Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-main">
+    <p class="kicker">Campaign ledger</p>
+    <h1>Ad Performance Analyzer</h1>
+    <p class="lede">Upload a campaign CSV and see spend, clicks and return on ad spend laid out clearly — no spreadsheet wrangling.</p>
+  </div>
+
+  <div class="upload-panel" id="upload-panel">
+    <label class="drop-zone" id="drop-zone" for="file-input">
+      <span class="drop-title" id="drop-title">Drop a CSV here, or choose a file</span>
+      <span class="drop-sub">Needs columns: Date, Campaign, Impressions, Clicks, Spend, Conversions, Revenue</span>
+      <input type="file" id="file-input" accept=".csv" hidden>
+    </label>
+    <div class="upload-actions">
+      <button class="btn btn-primary" id="analyze-btn" disabled>Analyze campaign data</button>
+      <a class="btn btn-ghost" id="sample-link" href="/api/sample-csv">Download a sample CSV</a>
+    </div>
+    <p class="upload-message" id="upload-message"></p>
+  </div>
+</header>
+
+<main>
+
+  <section class="empty-state" id="empty-state">
+    <p>No data yet. Upload a CSV above to see how your campaigns are performing.</p>
+  </section>
+
+  <div id="results" hidden>
+
+    <section class="kpi-strip" id="kpi-strip" aria-label="Key performance indicators">
+      <!-- KPI entries injected by script.js -->
+    </section>
+
+    <section class="charts">
+      <div class="panel">
+        <h2>Spend vs. revenue over time</h2>
+        <div class="chart-wrap"><canvas id="chart-timeseries"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>Return on ad spend, by campaign</h2>
+        <div class="chart-wrap"><canvas id="chart-roas"></canvas></div>
+      </div>
+    </section>
+
+    <section class="table-section">
+      <h2>Campaign breakdown</h2>
+      <div class="table-scroll">
+        <table id="campaign-table">
+          <thead>
+            <tr>
+              <th>Campaign</th>
+              <th>Spend</th>
+              <th>Revenue</th>
+              <th>ROAS</th>
+              <th>CTR</th>
+              <th>CPC</th>
+              <th>CPA</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="table-note" id="table-note"></p>
+    </section>
+
+  </div>
+
+</main>
+
+<footer>
+  <p>CTR = clicks ÷ impressions. CPC = spend ÷ clicks. CPA = spend ÷ conversions. ROAS = revenue ÷ spend.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
