@@ -12,9 +12,22 @@ const tableNote = document.getElementById('table-note');
 let selectedFile = null;
 let timeseriesChart = null;
 let roasChart = null;
+let serverWarm = false;
 
-const money = (n) => '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 });
-const number = (n) => Number(n).toLocaleString();
+// Ping the server as soon as the page loads so a sleeping free-tier
+// instance has time to wake up before the person clicks Analyze.
+(async function warmUp() {
+  try {
+    await fetch('/api/sample-csv', { method: 'HEAD' });
+    serverWarm = true;
+  } catch (e) {
+    // Ignore — the real request will still be attempted and will
+    // show its own message if the server truly can't be reached.
+  }
+})();
+
+const money = (n) => '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+const number = (n) => Number(n).toLocaleString('en-IN');
 
 function setFile(file) {
   selectedFile = file;
@@ -42,7 +55,7 @@ analyzeBtn.addEventListener('click', async () => {
   if (!selectedFile) return;
 
   analyzeBtn.disabled = true;
-  analyzeBtn.textContent = 'Analyzing…';
+  analyzeBtn.textContent = serverWarm ? 'Analyzing…' : 'Waking up server (can take ~30s)…';
   message.textContent = '';
   message.className = 'upload-message';
 
@@ -51,7 +64,20 @@ analyzeBtn.addEventListener('click', async () => {
 
   try {
     const res = await fetch('/api/analyze', { method: 'POST', body: formData });
-    const data = await res.json();
+
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      // The response wasn't JSON — almost always the hosting platform's
+      // own timeout/error page from a slow cold start, not a real bug.
+      message.textContent = res.status
+        ? `The server responded with an unexpected page (status ${res.status}). ` +
+          `If the site had been idle, it may still be waking up — wait a few seconds and try again.`
+        : 'The server sent back something unreadable. Please try again in a moment.';
+      message.className = 'upload-message error';
+      return;
+    }
 
     if (!res.ok) {
       message.textContent = data.error || 'Something went wrong reading that file.';
@@ -59,13 +85,16 @@ analyzeBtn.addEventListener('click', async () => {
       return;
     }
 
+    serverWarm = true;
     message.textContent = `Analyzed ${data.meta.rows_used.toLocaleString()} rows` +
       (data.meta.rows_dropped ? ` (${data.meta.rows_dropped} skipped for an unreadable date).` : '.');
     message.className = 'upload-message ok';
 
     renderResults(data);
   } catch (err) {
-    message.textContent = 'Could not reach the server. Is the app still running?';
+    message.textContent = serverWarm
+      ? 'Could not reach the server. Check your internet connection and try again.'
+      : 'Could not reach the server yet — it may still be waking up from being idle. Wait ~20 seconds and click Analyze again.';
     message.className = 'upload-message error';
   } finally {
     analyzeBtn.disabled = false;
@@ -148,7 +177,7 @@ function renderTimeseriesChart(ts) {
       plugins: { legend: { position: 'top', labels: { boxWidth: 12, usePointStyle: true } } },
       scales: {
         x: { grid: { color: gridColor }, ticks: { maxRotation: 0, autoSkip: true } },
-        y: { grid: { color: gridColor }, ticks: { callback: (v) => '$' + v } },
+        y: { grid: { color: gridColor }, ticks: { callback: (v) => '₹' + v } },
       },
     },
   });
